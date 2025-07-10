@@ -1,13 +1,13 @@
-package com.microservices.restaurant;
+package com.microservices.sales;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class RestaurantApplication {
+public class SalesApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(RestaurantApplication.class, args);
+		SpringApplication.run(SalesApplication.class, args);
 	}
 
 }
