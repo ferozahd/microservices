@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  configuration-server:
+    image: eureka-server:latest  # This is your built image name
+    build: .
+    network_mode: host  # This will use the host network
+    ports:
+      - "8888:8888"  # Expose the port if necessary (optional)
+    container_name: eureka-server-container

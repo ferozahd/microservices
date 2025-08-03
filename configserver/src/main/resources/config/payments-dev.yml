@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/payments
-    username: myuser
-    password: mypassword
+    url: ${PAYMENTS_DB_URL:jdbc:postgresql://localhost:5432/payments}
+    username: ${PAYMENTS_DB_USER_NAME:myuser}
+    password: ${PAYMENTS_DB_PASSWORD:mypassword}
     driver-class-name: org.postgresql.Driver

@@ -3,6 +3,7 @@ package com.microservices.restaurant.controllers;
 import com.microservices.restaurant.entities.User;
 import com.microservices.restaurant.repositories.UserRepository;
 import com.microservices.restaurant.resources.authentication.UserRegisterPostResource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -12,6 +13,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("authentication/")
+@Slf4j
 public class AuthenticationController {
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
@@ -35,6 +37,7 @@ public class AuthenticationController {
 
     @GetMapping("all-users")
     public ResponseEntity<List<User>> getAllUsers(){
+        log.info("All users get request");
         var users=userRepository.findAll();
         return ResponseEntity.ok(users);
     }

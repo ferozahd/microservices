@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  postgres-service:
+    image: postgres:16
+    container_name: postgresql-container
+    environment:
+      - POSTGRES_USER=myuser
+      - POSTGRES_PASSWORD=your_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks: 
+      - eureka-network
+      
+      
+  eurekaserver:
+    image: "eureka-server:latest"  # Replace with your Eureka server image
+    container_name: eurekaserver-container
+    environment:
+      - APPLICATION_NAME=eurekaserver
+      - SERVER_PORT=8761
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: "curl --fail --silent http://localhost:8761/actuator/health | grep '\"status\":\"UP\"' || exit 1"
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - eureka-network
+        
+        
+  gateway-service:
+    image: "app-gateway:latest"  # Replace with your Eureka server image
+    container_name: gateway-container
+    environment:
+      - APPLICATION_NAME=gateway-service
+      - SERVICE_DISCOVERY_DEFAULT_ZONE= http://eurekaserver:8761/eureka
+      - SERVER_PORT=7771
+    ports:
+      - "7771:7771"
+    healthcheck:
+      test: "curl --fail --silent http://localhost:7771/actuator/health/ping | grep '\"status\":\"UP\"' || exit 1"
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - eureka-network
+    depends_on:
+      eurekaserver:
+        condition: service_healthy
+
+  configuration-service:
+    image: configuration-server
+    container_name: configuration-container
+    volumes:
+      - ./logs:/var/log
+    environment:
+      - APPLICATION_NAME=configuration-service
+      - SERVICE_DISCOVERY_DEFAULT_ZONE= http://eurekaserver:8761/eureka
+      - SERVER_PORT=8888
+      - SPRING_BOOT_LOG_FILE=/var/log/configuration-app.log
+    ports:
+      - "8888:8888"
+    healthcheck:
+      test: "curl --fail --silent http://localhost:8888/actuator/health | grep '\"status\":\"UP\"' || exit 1"
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    depends_on:
+      eurekaserver:
+        condition: service_healthy
+      gateway-service:
+        condition: service_healthy
+    networks:
+      - eureka-network
+
+  restaurant-service:
+    image: restaurant
+    container_name: restaurant-container
+    volumes:
+      - ./logs:/var/log
+    environment:
+      - APPLICATION_NAME=restaurant-service
+      - CONFIG_SERVER_PATH=http://configuration-service:8888
+      - SERVICE_DISCOVERY_DEFAULT_ZONE=http://eurekaserver:8761/eureka
+      - SERVER_PORT=8090
+      - SPRING_BOOT_LOG_FILE=/var/log/restaurant-app.log
+    depends_on:
+      eurekaserver:
+        condition: service_healthy
+      configuration-service:
+        condition: service_healthy
+      gateway-service:
+        condition: service_healthy
+    networks:
+      - eureka-network
+
+volumes:
+  postgres_data:
+
+networks:
+  eureka-network:
+    driver: bridge

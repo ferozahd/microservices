@@ -67,6 +67,7 @@
 	</dependencyManagement>
 
 	<build>
+		<finalName>eureka-service-discovery</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>

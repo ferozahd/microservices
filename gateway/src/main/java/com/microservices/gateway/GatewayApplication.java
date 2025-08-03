@@ -16,9 +16,19 @@ public class GatewayApplication {
 	public RouteLocator customRouteLocator(RouteLocatorBuilder builder) {
 		return builder.routes()
 				.route("RESTAURANT", r -> r
-						.path("/restaurant/**")                     // Predicate
-						.filters(f -> f.stripPrefix(1))             // Filter
-						.uri("lb://RESTAURANT")             // URI with load balancer
+						.path("/restaurant/**")
+						.filters(f -> f.stripPrefix(1))
+						.uri("lb://RESTAURANT")
+				)
+				.route("PAYMENT", r -> r
+						.path("/payment/**")
+						.filters(f -> f.stripPrefix(1))
+						.uri("lb://PAYMENT")
+				)
+				.route("SALE", r -> r
+						.path("/sale/**")
+						.filters(f -> f.stripPrefix(1))
+						.uri("lb://SALE")
 				)
 				.build();
 	}
