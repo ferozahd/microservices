@@ -1,18 +1,18 @@
 version: '3.8'
 
 services:
-  postgres-service:
-    image: postgres:16
-    container_name: postgresql-container
-    environment:
-      - POSTGRES_USER=myuser
-      - POSTGRES_PASSWORD=your_password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    networks: 
-      - eureka-network
+#  postgres-service:
+#    image: postgres:16
+#    container_name: postgresql-container
+#    environment:
+#      - POSTGRES_USER=myuser
+#      - POSTGRES_PASSWORD=your_password
+#    volumes:
+#      - postgres_data:/var/lib/postgresql/data
+#    ports:
+#      - "5432:5432"
+#    networks:
+#      - eureka-network
       
       
   eurekaserver:
@@ -91,6 +91,12 @@ services:
       - SERVICE_DISCOVERY_DEFAULT_ZONE=http://eurekaserver:8761/eureka
       - SERVER_PORT=8090
       - SPRING_BOOT_LOG_FILE=/var/log/restaurant-app.log
+    healthcheck:
+      test: "curl --fail --silent http://localhost:8090/actuator/health | grep '\"status\":\"UP\"' || exit 1"
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     depends_on:
       eurekaserver:
         condition: service_healthy
@@ -101,9 +107,53 @@ services:
     networks:
       - eureka-network
 
+
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki/config:/etc/loki
+      - ./loki/data:/loki
+    command: -config.file=/etc/loki/loki-config.yaml
+    depends_on:
+      restaurant-service:
+        condition: service_healthy
+    networks:
+      - eureka-network
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    volumes:
+      - ./var/log:/var/log # Mount the log directory from your host machine
+      - ./promtail/config:/etc/promtail
+    command: -config.file=/etc/promtail/promtail-config.yaml
+    networks:
+      - eureka-network
+
+  grafana:
+    image: grafana/grafana:9.0.3
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - loki
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - eureka-network
+
 volumes:
   postgres_data:
+  grafana-data:
+  loki-data:
 
+    
 networks:
   eureka-network:
     driver: bridge

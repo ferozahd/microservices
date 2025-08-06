@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: ${RESTAURANT_DB_URL:jdbc:postgresql://localhost:5432/restaurant}
-    username: ${RESTAURANT_DB_USER_NAME:myuser}
-    password: ${RESTAURANT_DB_PASSWORD:mypassword}
+    url: jdbc:postgresql://192.168.0.108:5432/restaurant
+    username: postgres
+    password: postgres
     driver-class-name: org.postgresql.Driver
