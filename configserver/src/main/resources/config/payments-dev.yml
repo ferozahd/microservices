@@ -1,0 +1,6 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://192.168.0.108:5432/payments
+    username: myuser
+    password: mypassword
+    driver-class-name: org.postgresql.Driver
