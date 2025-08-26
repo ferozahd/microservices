@@ -1,0 +1,277 @@
+version: '3.8'
+
+networks:
+  eureka-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  grafana-data:
+  loki-data:
+  spring-logs: {}
+services:
+
+  # -------------------- Eureka Server --------------------
+  eurekaserver:
+    image: "eureka-server:latest" # Replace with your Eureka server image
+    container_name: eurekaserver-container
+    environment:
+      - APPLICATION_NAME=eurekaserver
+      - SERVER_PORT=8761
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: "curl --fail --silent http://localhost:8761/actuator/health | grep '\"status\":\"UP\"' || exit 1"
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - eureka-network
+
+  # -------------------- Gateway Service --------------------
+  gateway-service:
+    image: "app-gateway:latest"
+    container_name: gateway-container
+    environment:
+      - APPLICATION_NAME=gateway-service
+      - SERVICE_DISCOVERY_DEFAULT_ZONE=http://eurekaserver:8761/eureka
+      - SERVER_PORT=7771
+    ports:
+      - "7771:7771"
+    healthcheck:
+      test: "curl --fail --silent http://localhost:7771/actuator/health/ping | grep '\"status\":\"UP\"' || exit 1"
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - eureka-network
+    depends_on:
+      eurekaserver:
+        condition: service_healthy
+
+  # -------------------- Configuration Service --------------------
+  configuration-service:
+    image: configuration-server
+    container_name: configuration-container
+    volumes:
+      - ./logs:/var/log
+    environment:
+      - APPLICATION_NAME=configuration-service
+      - SERVICE_DISCOVERY_DEFAULT_ZONE=http://eurekaserver:8761/eureka
+      - SERVER_PORT=8888
+      - SPRING_BOOT_LOG_FILE=/var/log/configuration-app.log
+    ports:
+      - "8888:8888"
+    healthcheck:
+      test: "curl --fail --silent http://localhost:8888/actuator/health | grep '\"status\":\"UP\"' || exit 1"
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    depends_on:
+      eurekaserver:
+        condition: service_healthy
+      gateway-service:
+        condition: service_healthy
+    networks:
+      - eureka-network
+
+  # -------------------- Restaurant Service --------------------
+  restaurant-service:
+    image: restaurant
+    container_name: restaurant-container
+    volumes:
+      - spring-logs:/restaurant/logs
+    environment:
+      - APPLICATION_NAME=restaurant-service
+      - CONFIG_SERVER_PATH=http://configuration-service:8888
+      - SERVICE_DISCOVERY_DEFAULT_ZONE=http://eurekaserver:8761/eureka
+      - SERVER_PORT=8090
+      - SPRING_BOOT_LOG_FILE=/restaurant/logs/restaurant-app.log
+    healthcheck:
+      test: "curl --fail --silent http://localhost:8090/actuator/health | grep '\"status\":\"UP\"' || exit 1"
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    depends_on:
+      eurekaserver:
+        condition: service_healthy
+      configuration-service:
+        condition: service_healthy
+      gateway-service:
+        condition: service_healthy
+    networks:
+      - eureka-network
+
+  # -------------------- Loki & Logging --------------------
+  loki-backend:
+    image: grafana/loki:latest
+    container_name: loki-backend
+    ports:
+      - "3100"
+      - "7946"
+    volumes:
+      - ./loki-config.yaml:/etc/loki/loki-config.yaml
+    command:
+      -config.file=/etc/loki/loki-config.yaml
+    depends_on:
+      restaurant-service:
+        condition: service_healthy
+    networks:
+      - eureka-network
+
+  loki-read:
+    image: grafana/loki:latest
+    container_name: loki-read
+    command: "-config.file=/etc/loki/config.yaml -target=read"
+    ports:
+      - "3101:3100"
+      - "7946"
+      - "9095"
+    volumes:
+      - ./loki-config.yaml:/etc/loki/config.yaml
+    depends_on:
+      - minio
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - eureka-network
+
+  loki-write:
+    image: grafana/loki:latest
+    container_name: loki-write
+    command: "-config.file=/etc/loki/config.yaml -target=write"
+    ports:
+      - "3102:3100"
+      - "7946"
+      - "9095"
+    volumes:
+      - ./loki-config.yaml:/etc/loki/config.yaml
+    depends_on:
+      - minio
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - eureka-network
+
+  # -------------------- Nginx Gateway --------------------
+  gateway:
+    image: nginx:latest
+    container_name: nginx-gateway-container
+    depends_on:
+      - loki-read
+      - loki-write
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - "3100:3100"
+    healthcheck:
+      test: ["CMD","service","nginx","status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - eureka-network
+
+  # -------------------- MinIO --------------------
+  minio:
+    image: minio/minio
+    container_name: minio
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        mkdir -p /data/loki-data && \
+        mkdir -p /data/loki-ruler && \
+        minio server /data
+    environment:
+      - MINIO_ROOT_USER=loki
+      - MINIO_ROOT_PASSWORD=supersecret
+      - MINIO_PROMETHEUS_AUTH_TYPE=public
+      - MINIO_UPDATE=off
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./.data/minio:/data
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+      interval: 15s
+      timeout: 20s
+      retries: 5
+    networks:
+      - eureka-network
+
+  # -------------------- Grafana --------------------
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    depends_on:
+      - gateway
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        mkdir -p /etc/grafana/provisioning/datasources
+        cat <<EOF > /etc/grafana/provisioning/datasources/ds.yaml
+        apiVersion: 1
+        datasources:
+          - name: Loki
+            type: loki
+            access: proxy
+            url: http://loki-read:3100
+            jsonData:
+              httpHeaderName1: "X-Scope-OrgID"
+            secureJsonData:
+              httpHeaderValue1: "tenant1"
+        EOF
+        /run.sh
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - eureka-network
+
+
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    networks:
+      - eureka-network
+    volumes:
+      - ./promtail-config.yaml:/etc/promtail/config.yaml:ro   # your config
+      - spring-logs:/var/log
+    command: -config.file=/etc/promtail/config.yaml
+
+#
+#  # -------------------- Alloy --------------------
+#  alloy:
+#    container_name: alloy
+#    image: grafana/alloy:latest
+#    volumes:
+#      - ./alloy-local-config.yaml:/etc/alloy/config.alloy:ro
+#      - /var/run/docker.sock:/var/run/docker.sock
+#    command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
+#    ports:
+#      - 12345:12345
+#    depends_on:
+#      - gateway
+#    networks:
+#      - eureka-network
