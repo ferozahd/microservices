@@ -11,10 +11,10 @@ import lombok.Setter;
 public class Sales {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "customer_seq")
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "sales_seq")
     @SequenceGenerator(
-            name = "customer_seq",              // sequence generator name
-            sequenceName = "customer_id_seq",   // actual database sequence name
+            name = "sales_seq",              // sequence generator name
+            sequenceName = "sales_id_seq",   // actual database sequence name
             allocationSize = 1                  // important for postgres (avoid gaps)
     )
     private Long id;
