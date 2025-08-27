@@ -32,7 +32,7 @@ public class OrderCompletionServiceImpl implements OrderCompletionService {
     @Override
     public OrderCompletionGetResources completeOrder(OrderCompletionPostResources post) {
         log.info("Creating a complete order for user {}",post.getUserName());
-        var user= userRepository.findByUserName(post.getUserName())
+        var user= userRepository.findByName(post.getUserName())
                 .orElseThrow(()->new UserNotFoundException("User not found for user :"+post.getUserName()));
         var sales = salesFeignClient.createSales(post);
         var payments = paymentsFeignClient.createPayment(post);
@@ -58,6 +58,28 @@ public class OrderCompletionServiceImpl implements OrderCompletionService {
 
     @Override
     public OrderCompletionGetResources getOrderByUserName(String username) {
-        return null;
+        log.info("Find a complete order for user {}",username);
+        var user= userRepository.findByName(username)
+                .orElseThrow(()->new UserNotFoundException("User not found for user :"+username));
+        var sales = salesFeignClient.getSalesByUsername(username);
+        var payments = paymentsFeignClient.getPaymentsByUsername(username);
+
+        if(!OK.equals(sales.getStatusCode())){
+            throw new FeignServiceFailedException("Sales server not responding");
+        }
+
+
+        if(!OK.equals(payments.getStatusCode())){
+            throw new FeignServiceFailedException("Payment server not responding");
+        }
+
+
+        return new OrderCompletionGetResources(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                payments.getBody(),
+                sales.getBody()
+        );
     }
 }

@@ -20,16 +20,18 @@ public class GatewayApplication {
 						.filters(f -> f.stripPrefix(1))
 						.uri("lb://RESTAURANT")
 				)
-				.route("PAYMENT", r -> r
-						.path("/payment/**")
+
+				.route("PAYMENTS", r -> r
+						.path("/payments/**")
 						.filters(f -> f.stripPrefix(1))
-						.uri("lb://PAYMENT")
+						.uri("lb://PAYMENTS")
 				)
 				.route("SALE", r -> r
-						.path("/sale/**")
+						.path("/sales/**")
 						.filters(f -> f.stripPrefix(1))
-						.uri("lb://SALE")
+						.uri("lb://SALES")
 				)
+
 				.build();
 	}
 }

@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@RequestMapping("payments")
+@RequestMapping()
 public interface PaymentController {
 
     @PostMapping("/create-payment")
@@ -18,6 +18,6 @@ public interface PaymentController {
 
 
     @GetMapping("/by-user")
-    ResponseEntity<List<PaymentGetResources>> getAllPayments(@RequestParam String username);
+    ResponseEntity<List<PaymentGetResources>> getPaymentsByUsername(@RequestParam String username);
 
 }

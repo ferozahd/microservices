@@ -4,3 +4,9 @@ spring:
     username: postgres
     password: postgres
     driver-class-name: org.postgresql.Driver
+payment:
+  service:
+    url: ${GATE_WAY_URL:http://localhost:7771/payments}
+sales:
+  service:
+    url: ${GATE_WAY_URL:http://localhost:7771/sales}

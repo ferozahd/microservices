@@ -9,10 +9,27 @@ clients:
   - url: http://loki-write:3100/loki/api/v1/push  # Replace <LOKI_HOST> with your Loki URL
     tenant_id: tenant1
 scrape_configs:
-  - job_name: system-logs
-    static_configs:
-      - targets:
-          - localhost
-        labels:
-          job: restaurant-log
-          __path__: /var/log/restaurant-app.log  # Path to logs in your volume
+    - job_name: restaurant-logs
+      static_configs:
+          - targets:
+            - localhost
+            labels:
+              job: restaurant-log
+              __path__: /var/log/restaurant-app.log
+
+    - job_name: sales-logs
+      static_configs:
+        - targets:
+            - localhost
+          labels:
+            job: sales-log
+            __path__: /var/log/sales-app.log
+
+    - job_name: payments-logs
+      static_configs:
+        - targets:
+            - localhost
+          labels:
+            job: payments-log
+            __path__: /var/log/payments-app.log
+

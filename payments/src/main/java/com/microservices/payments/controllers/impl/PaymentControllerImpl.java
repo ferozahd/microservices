@@ -28,7 +28,7 @@ public class PaymentControllerImpl implements PaymentController {
     }
 
     @Override
-    public ResponseEntity<List<PaymentGetResources>> getAllPayments(String username) {
+    public ResponseEntity<List<PaymentGetResources>> getPaymentsByUsername(String username) {
         return ResponseEntity.ok(paymentService.getPaymentsByUserName(username));
     }
 }
