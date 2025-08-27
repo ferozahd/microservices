@@ -62,7 +62,7 @@ services:
       - SERVICE_DISCOVERY_DEFAULT_ZONE=http://eurekaserver:8761/eureka
       - SERVER_PORT=8888
       - SPRING_BOOT_LOG_FILE=/var/log/configuration-app.log
-      - GATE_WAY_URL=http://gateway-service:7771
+
     ports:
       - "8888:8888"
     healthcheck:
@@ -91,6 +91,7 @@ services:
       - SERVICE_DISCOVERY_DEFAULT_ZONE=http://eurekaserver:8761/eureka
       - SERVER_PORT=8090
       - SPRING_BOOT_LOG_FILE=/restaurant/logs/restaurant-app.log
+      - GATE_WAY_URL=http://gateway-service:7771
     healthcheck:
       test: "curl --fail --silent http://localhost:8090/actuator/health | grep '\"status\":\"UP\"' || exit 1"
       interval: 20s

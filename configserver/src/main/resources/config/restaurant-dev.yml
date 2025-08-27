@@ -6,7 +6,7 @@ spring:
     driver-class-name: org.postgresql.Driver
 payment:
   service:
-    url: ${GATE_WAY_URL:http://localhost:7771/payments}
+    url: ${GATE_WAY_URL:http://localhost:7771}/payments
 sales:
   service:
-    url: ${GATE_WAY_URL:http://localhost:7771/sales}
+    url: ${GATE_WAY_URL:http://localhost:7771}/sales
