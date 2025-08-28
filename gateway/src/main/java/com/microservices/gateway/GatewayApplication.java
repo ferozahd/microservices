@@ -23,12 +23,16 @@ public class GatewayApplication {
 
 				.route("PAYMENTS", r -> r
 						.path("/payments/**")
-						.filters(f -> f.stripPrefix(1))
+						.filters(f -> f.stripPrefix(1)
+								.circuitBreaker(c -> c.setName("paymentsCB")
+										.setFallbackUri("forward:/fallback/payments")))
 						.uri("lb://PAYMENTS")
 				)
 				.route("SALE", r -> r
 						.path("/sales/**")
-						.filters(f -> f.stripPrefix(1))
+						.filters(f -> f.stripPrefix(1)
+								.circuitBreaker(c -> c.setName("salesCB")
+								.setFallbackUri("forward:/fallback/sales")))
 						.uri("lb://SALES")
 				)
 
